@@ -53,7 +53,7 @@ class SMCSampler1(nn.Module):
     def sample(self):
         self.t = 1
         for t in range(1, self.T):
-            propagated_particles = self.propagate_particles(5)
+            propagated_particles = self.propagate_particles(50)
             self.resample_particles(propagated_particles)
             self.reweight_particles()
             self.t +=1
