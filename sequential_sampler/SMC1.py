@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.distributions import Categorical
 from torch.distributions import MultivariateNormal
+from tqdm import tqdm
 
 class SMCSampler1(nn.Module):
     def __init__(self, target_log_densities,x0, w0):
@@ -13,7 +14,6 @@ class SMCSampler1(nn.Module):
         assert w0.shape[0] == self.N, 'number of weights is different from number of particles'
         self.T = len(target_log_densities)
         self.target_log_densities = target_log_densities
-        self.t = 0
 
     def log_Q(self, target_log_density, x_prime, x, tau):
         x.requires_grad_()
@@ -33,28 +33,26 @@ class SMCSampler1(nn.Module):
 
         return to_return
 
-    def propagate_particles(self, K):
-        current_particles = self.particles[self.t-1]
+    def propagate_particles(self, K,t):
+        current_particles = self.particles[t]
         for k in range(1,K+1):
-            current_particles = self.metropolis_adjusted_langevin_step(target_log_density=self.target_log_densities[self.t-1], x = current_particles,tau = float(1/k))
+            current_particles = self.metropolis_adjusted_langevin_step(target_log_density=self.target_log_densities[t], x = current_particles,tau = float(1/k))
         return current_particles
 
-    def resample_particles(self, propagated_particles):
-        pick = Categorical(self.weights[self.t-1]).sample([self.N])
+    def resample_particles(self, propagated_particles,t):
+        pick = Categorical(self.weights[t]).sample([self.N])
         to_append = torch.stack([propagated_particles[pick[i], :] for i in range(self.N)])
         self.particles.append(to_append)
 
-    def reweight_particles(self):
-        resampled_particles = self.particles[self.t]
-        unormalized_log_weights = self.target_log_densities[self.t](resampled_particles) - torch.log(torch.tensor([self.N])) - self.target_log_densities[self.t-1](resampled_particles)
+    def reweight_particles(self,t):
+        resampled_particles = self.particles[t+1]
+        unormalized_log_weights = self.target_log_densities[t+1](resampled_particles) - torch.log(torch.tensor([self.N])) - self.target_log_densities[t](resampled_particles)
         normalized_weights = torch.exp(unormalized_log_weights - torch.logsumexp(unormalized_log_weights, dim = 0) )
         self.weights.append(normalized_weights)
 
     def sample(self):
-        self.t = 1
-        for t in range(1, self.T):
-            propagated_particles = self.propagate_particles(50)
-            self.resample_particles(propagated_particles)
-            self.reweight_particles()
-            self.t +=1
+        for t in tqdm(range(self.T-1)):
+            propagated_particles = self.propagate_particles(100,t)
+            self.resample_particles(propagated_particles,t)
+            self.reweight_particles(t)
 
