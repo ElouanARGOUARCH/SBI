@@ -4,6 +4,7 @@ from torch.distributions import Categorical
 from torch.distributions import MultivariateNormal
 from tqdm import tqdm
 
+import matplotlib.pyplot as plt
 class SMCSampler1(nn.Module):
     def __init__(self, target_log_densities,x0, w0):
         super().__init__()
@@ -50,9 +51,21 @@ class SMCSampler1(nn.Module):
         normalized_weights = torch.exp(unormalized_log_weights - torch.logsumexp(unormalized_log_weights, dim = 0) )
         self.weights.append(normalized_weights)
 
+    def plot_density(self, t):
+        linspace = torch.linspace(-15,15,200).unsqueeze(-1)
+        plt.plot(linspace, torch.exp(self.target_log_densities[t](linspace)).detach().numpy())
+        plt.show()
+
+    def plot_all_densities(self):
+        linspace = torch.linspace(-15, 15, 1000).unsqueeze(-1)
+        for i in range(self.T):
+            plt.figure()
+            plt.plot(linspace, torch.exp(self.target_log_densities[i](linspace)))
+            plt.show()
+
     def sample(self):
         for t in tqdm(range(self.T-1)):
-            propagated_particles = self.propagate_particles(100,t)
+            propagated_particles = self.propagate_particles(10,t)
             self.resample_particles(propagated_particles,t)
             self.reweight_particles(t)
 
