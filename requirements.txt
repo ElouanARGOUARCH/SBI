@@ -1,2 +1,3 @@
 git+https://github.com/ElouanARGOUARCH/TargetExamples.git
+git+https://github.com/ElouanARGOUARCH/Discretely-Indexed-Flows.git
 git+https://github.com/ElouanARGOUARCH/NeuralRatio.git
