@@ -20,7 +20,7 @@ class WLBSampler:
         pbar = tqdm(range(epochs))
         for t in pbar:
             optimizer.zero_grad()
-            loss = -torch.sum(w*self.log_likelihood_function(self.observations.unsqueeze(1).repeat(1, number_samples,1),parameter.unsqueeze(0).repeat(self.observations.shape[0], 1,1)))
+            loss = -torch.sum(w*self.log_likelihood_function(self.observations.unsqueeze(1).repeat(1, number_samples,1),parameter.unsqueeze(0).repeat(self.observations.shape[0], 1,1)))/number_samples
             loss.backward()
             optimizer.step()
             pbar.set_postfix_str(str(loss.item()))

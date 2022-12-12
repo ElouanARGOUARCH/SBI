@@ -100,13 +100,13 @@ class ConditionalDIFDensityEstimator(nn.Module):
     def loss(self, batch_x, batch_theta, batch_w):
         batch_theta_unsqueezed = batch_theta.unsqueeze(-2).repeat(1, self.K, 1)
         z = self.T.forward(batch_x, batch_theta)
-        return -torch.mean(batch_w*torch.logsumexp(self.reference.log_density(z) + torch.diagonal(self.w.log_prob(torch.cat([z, batch_theta_unsqueezed], dim = -1)), 0, -2, -1) + self.T.log_det_J(batch_x, batch_theta), dim=-1))
+        return -torch.sum(batch_w*torch.logsumexp(self.reference.log_density(z) + torch.diagonal(self.w.log_prob(torch.cat([z, batch_theta_unsqueezed], dim = -1)), 0, -2, -1) + self.T.log_det_J(batch_x, batch_theta), dim=-1))
 
     def train(self, epochs, batch_size = None,lr = 5e-3, bootstrap = False):
         if bootstrap:
             w = torch.distributions.Dirichlet(torch.ones(self.x_samples.shape[0])).sample()
         else:
-            w = torch.ones(self.x_samples.shape[0])
+            w = torch.ones(self.x_samples.shape[0])/self.x_samples.shape[0]
         self.para_list = list(self.parameters())
         self.optimizer = torch.optim.Adam(self.para_list, lr=lr)
 
