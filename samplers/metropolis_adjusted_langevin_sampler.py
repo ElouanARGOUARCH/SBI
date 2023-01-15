@@ -5,10 +5,14 @@ from tqdm import tqdm
 
 
 class MALA(nn.Module):
-    def __init__(self, target_log_density, d, number_chains):
+    def __init__(self, target_log_density, d,proposal_distribution=None, number_chains=1):
         super().__init__()
         self.target_log_density = target_log_density
         self.d = d
+        if proposal_distribution is None:
+            self.proposal_distribution = torch.distributions.MultivariateNormal(torch.zeros(self.d), torch.eye(self.d))
+        else:
+            self.proposal_distribution = proposal_distribution
         self.number_chains = number_chains
 
     def log_Q(self, x,x_prime, tau):
@@ -30,7 +34,7 @@ class MALA(nn.Module):
         return x,mask
 
     def sample(self, number_steps, tau=0.1):
-        x = torch.randn(self.number_chains, self.d)
+        x = self.proposal_distribution.sample([self.number_chains])
         x.requires_grad_()
         pbar = tqdm(range(number_steps))
         for t in pbar:

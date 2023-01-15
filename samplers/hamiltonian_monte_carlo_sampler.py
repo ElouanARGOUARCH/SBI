@@ -3,10 +3,15 @@ from torch import nn
 from tqdm import tqdm
 
 class HMC(nn.Module):
-    def __init__(self, target_log_density, d, number_chains):
+    def __init__(self, target_log_density, d,proposal_distribution=None, number_chains=1):
         super().__init__()
         self.target_log_density = target_log_density
         self.d = d
+
+        if proposal_distribution is None:
+            self.proposal_distribution = torch.distributions.MultivariateNormal(torch.zeros(self.d), torch.eye(self.d))
+        else:
+            self.proposal_distribution = proposal_distribution
         self.number_chains = number_chains
 
     def hamiltonian_energy(self, x, p, std):
@@ -40,7 +45,7 @@ class HMC(nn.Module):
         return x,mask
 
     def sample(self, number_steps, std=1, dt=0.01, L=20):
-        x = torch.randn(self.number_chains, self.d)
+        x = self.proposal_distribution.sample([self.number_chains])
         pbar = tqdm(range(number_steps))
         for t in pbar:
             x,mask = self.hamiltonian_monte_carlo_step(x, std, dt, L)
@@ -48,7 +53,7 @@ class HMC(nn.Module):
         return x
 
     def sample_trajectory(self, trajectory_length, std=1, dt=0.01, L=20):
-        x = torch.randn(1, self.d)
+        x = self.proposal_distribution.sample([1])
         pbar = tqdm(range(trajectory_length))
         trajectory = []
         for t in pbar:
