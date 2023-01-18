@@ -109,27 +109,25 @@ def generate_D_x0(n_D, n_x0):
     return D_x, D_theta, x0
 
 def run_gibbs_chain(D_x, D_theta, x0, chain_length=1000):
-    blr = bayesian_linear_regression(x0,sigma_simulateur=.5, mu_theta=mu_theta, sigma_theta=sigma_theta)
+    blr = bayesian_linear_regression(x0, sigma_simulateur = .5, mu_theta  = mu_theta, sigma_theta = sigma_theta)
     # initialise with phi|D
     mu_phi_D, sigma_phi_D = blr.compute_parameter_posterior_parameter(D_theta, D_x)
     current_phi = torch.distributions.MultivariateNormal(mu_phi_D, sigma_phi_D).sample()
     # sample theta|phi
     mu_theta_x0_phi, sigma_theta_x0_phi = blr.compute_posterior_distribution_parameters(current_phi)
-    current_theta = torch.distributions.MultivariateNormal(mu_theta_x0_phi, sigma_theta_x0_phi).sample()
-
-    list_theta_gibbs = [current_theta]
-    list_phi_gibbs = [current_phi]
+    current_Theta = torch.distributions.MultivariateNormal(mu_theta_x0_phi, sigma_theta_x0_phi).sample([x0.shape[0]])
+    list_theta_weird_gibbs = [current_Theta[0]]
+    list_phi_weird_gibbs = [current_phi]
     for t in range(chain_length):
-        current_Theta = current_theta.unsqueeze(0).repeat(x0.shape[0], 1)
         D_theta_plus = torch.cat([D_theta, current_Theta], dim=0)
         D_x_plus = torch.cat([D_x, x0], dim=0)
         mu_phi_D_plus, sigma_phi_D_plus = blr.compute_parameter_posterior_parameter(D_theta_plus, D_x_plus)
         current_phi = torch.distributions.MultivariateNormal(mu_phi_D_plus, sigma_phi_D_plus).sample()
         mu_theta_x0_phi, sigma_theta_x0_phi = blr.compute_posterior_distribution_parameters(current_phi)
-        current_theta = torch.distributions.MultivariateNormal(mu_theta_x0_phi, sigma_theta_x0_phi).sample()
-        list_theta_gibbs.append(current_theta)
-        list_phi_gibbs.append(current_phi)
-    return torch.stack(list_theta_gibbs), torch.stack(list_phi_gibbs)
+        current_Theta = torch.distributions.MultivariateNormal(mu_theta_x0_phi, sigma_theta_x0_phi).sample([x0.shape[0]])
+        list_theta_weird_gibbs.append(current_Theta[0])
+        list_phi_weird_gibbs.append(current_phi)
+    return torch.stack(list_theta_weird_gibbs), torch.stack(list_phi_weird_gibbs)
 
 
 def several_gibbs_chains(n_D,n_x0,number_tries = 10):
