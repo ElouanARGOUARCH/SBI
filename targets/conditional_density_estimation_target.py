@@ -123,41 +123,41 @@ class GaussianField(ConditionalDensityEstimationTarget):
 class DeformedCircles(ConditionalDensityEstimationTarget):
     def __init__(self):
         super().__init__()
-        self.prior = torch.distributions.MultivariateNormal(torch.tensor([0.]),torch.tensor([[3.]]))
 
-    def sample_prior(self, num_samples):
-        return self.prior.sample([num_samples])
+    def sample(self, theta, means=torch.tensor([1., 2.]), weights=torch.tensor([.5, .5]), noise=0.125):
+        angle = torch.rand(theta.shape[0]) * 2 * math.pi
+        cat = torch.distributions.Categorical(weights).sample([theta.shape[0]])
+        x, y = means[cat] * torch.cos(angle) + torch.randn_like(angle) * noise, means[cat] * torch.sin(
+            angle) + torch.randn_like(angle) * noise
+        return torch.cat([x.unsqueeze(-1), y.unsqueeze(-1)], dim=-1)*theta
 
-    def prior_log_prob(self, theta):
-        return self.prior.log_prob(theta)
+    def log_prob(self, samples,theta, means=torch.tensor([1., 2.]), weights=torch.tensor([.5, .5]), noise=0.125):
+        r = torch.norm(samples/theta, dim=-1).unsqueeze(-1)
+        cat = torch.distributions.Categorical(weights)
+        mvn = torch.distributions.MultivariateNormal(means.unsqueeze(-1),
+                                                     torch.eye(1).unsqueeze(0).repeat(2, 1, 1) * noise)
+        mixt = torch.distributions.MixtureSameFamily(cat, mvn)
+        return mixt.log_prob(r)
 
-    def simulate(self, thetas):
-        num_samples = min(thetas.shape[0], 100)
-        X, y = datasets.make_circles(num_samples, factor=.5, noise=0.025)
-        X = StandardScaler().fit_transform(X)
-        return torch.cat([torch.tensor(X[torch.randperm(X.shape[0])][0]).unsqueeze(0).float() * torch.abs(theta) for theta in
-                   thetas], dim=0)
 
-    def target_visual(self):
-        fig = plt.figure(figsize=(10, 10))
-        for i in range(2):
-            for j in range(2):
-                theta = torch.tensor([[.75 + i * 1.25, .75 + j * 1.25]])
-                T = theta.repeat(5000, 1)
-                X, y = datasets.make_circles(5000, factor=0.5, noise=0.025)
-                X = torch.tensor(StandardScaler().fit_transform(X)).float() * T
-                ax = fig.add_subplot(2, 2, i + 2 * j + 1)
-                ax.set_xlim(-5, 5)
-                ax.set_ylim(-5, 5)
-                ax.scatter(X[:, 0], X[:, 1], color='red', alpha=.3,
-                           label='theta = [' + str(np.round(theta[0, 0].item(), 3)) + ',' + str(
-                               np.round(theta[0, 1].item(), 3)) + ']')
-                ax.scatter([0], [0], color='black')
-                ax.arrow(0., 0., theta[0, 0], 0., color='black', head_width=0.2, head_length=0.2)
-                ax.text(theta[0, 0] - .3, -.4, "theta_x = " + str(np.round(theta[0, 0].item(), 3)))
-                ax.arrow(0., 0., 0., theta[0, 1], color='black', head_width=0.2, head_length=0.2)
-                ax.text(-.3, theta[0, 1] + .4, "theta_y = " + str(np.round(theta[0, 1].item(), 3)))
-                ax.legend()
+class SymmetricalDeformedCircles(ConditionalDensityEstimationTarget):
+    def __init__(self):
+        super().__init__()
+
+    def sample(self, theta, means=torch.tensor([1., 2.]), weights=torch.tensor([.5, .5]), noise=0.125):
+        angle = torch.rand(theta.shape[0]) * 2 * math.pi
+        cat = torch.distributions.Categorical(weights).sample([theta.shape[0]])
+        x, y = means[cat] * torch.cos(angle) + torch.randn_like(angle) * noise, means[cat] * torch.sin(
+            angle) + torch.randn_like(angle) * noise
+        return torch.cat([x.unsqueeze(-1), y.unsqueeze(-1)], dim=-1)*theta
+
+    def log_prob(self, samples,theta, means=torch.tensor([1., 2.]), weights=torch.tensor([.5, .5]), noise=0.125):
+        r = torch.norm(samples/theta, dim=-1).unsqueeze(-1)
+        cat = torch.distributions.Categorical(weights)
+        mvn = torch.distributions.MultivariateNormal(means.unsqueeze(-1),
+                                                     torch.eye(1).unsqueeze(0).repeat(2, 1, 1) * noise)
+        mixt = torch.distributions.MixtureSameFamily(cat, mvn)
+        return mixt.log_prob(r)
 
 class MoonsRotation(ConditionalDensityEstimationTarget):
     def __init__(self):

@@ -22,3 +22,7 @@ def plot_likelihood_function(log_likelihood, x_min = -10,x_max = 10, y_min = -10
         tt_y_plus = tt_y.unsqueeze(1).unsqueeze(-1).repeat(1,tt_x.shape[0], 1)
         with torch.no_grad():
             plt.contourf(tt_x,tt_y,torch.exp(log_likelihood(tt_y_plus, tt_x_plus)), levels = levels, cmap = matplotlib.cm.get_cmap('viridis'), alpha = alpha, lw = 0)
+
+def plot_2d_points(samples):
+    plt.scatter(samples[:,0], samples[:,1])
+    plt.show()

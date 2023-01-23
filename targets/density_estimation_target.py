@@ -4,6 +4,7 @@ from torch import nn
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+import math
 
 class DensityEstimationTarget(nn.Module):
     def __init__(self):
@@ -26,10 +27,19 @@ class TwoCircles(DensityEstimationTarget):
     def __init__(self):
         super().__init__()
 
-    def sample(self, num_samples):
-        X, y = datasets.make_circles(num_samples, factor=0.5, noise=0.05)
-        X = StandardScaler().fit_transform(X)
-        return torch.tensor(X).float()
+    def sample(self,num_samples, means = torch.tensor([1.,2.]),weights = torch.tensor([.5,.5]), noise = 0.125):
+        angle = torch.rand(num_samples)*2*math.pi
+        cat = torch.distributions.Categorical(weights).sample(num_samples)
+        x,y = means[cat]*torch.cos(angle) + torch.randn_like(angle)*noise,means[cat]*torch.sin(angle) + torch.randn_like(angle)*noise
+        return torch.cat([x.unsqueeze(-1),y.unsqueeze(-1)], dim =-1)
+
+    def log_prob(self,samples, means = torch.tensor([1.,2.]),weights = torch.tensor([.5,.5]), noise = 0.125):
+        r = torch.norm(samples, dim=-1).unsqueeze(-1)
+        cat = torch.distributions.Categorical(weights)
+        mvn = torch.distributions.MultivariateNormal(means.unsqueeze(-1), torch.eye(1).unsqueeze(0).repeat(2,1,1)*noise)
+        mixt = torch.distributions.MixtureSameFamily(cat, mvn)
+        return mixt.log_prob(r)
+
 
 class Moons(DensityEstimationTarget):
     def __init__(self):

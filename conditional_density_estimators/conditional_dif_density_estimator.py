@@ -97,12 +97,42 @@ class ConditionalDIFDensityEstimator(nn.Module):
         pick = Categorical(torch.exp(self.w.log_prob(torch.cat([z, theta], dim = -1)))).sample()
         return x[range(x.shape[0]), pick, :]
 
+    def change_dataset(self, x_samples, theta_samples):
+        self.x_samples = x_samples
+        self.theta_samples = theta_samples
+
     def loss(self, batch_x, batch_theta, batch_w):
         batch_theta_unsqueezed = batch_theta.unsqueeze(-2).repeat(1, self.K, 1)
         z = self.T.forward(batch_x, batch_theta)
         return -torch.sum(batch_w*torch.logsumexp(self.reference.log_density(z) + torch.diagonal(self.w.log_prob(torch.cat([z, batch_theta_unsqueezed], dim = -1)), 0, -2, -1) + self.T.log_det_J(batch_x, batch_theta), dim=-1))
 
-    def train(self, epochs, batch_size = None,lr = 5e-3, bootstrap = False):
+    def train(self, epochs, batch_size = None,lr = 5e-3, device = None):
+        self.para_list = list(self.parameters())
+        self.optimizer = torch.optim.Adam(self.para_list, lr=lr)
+
+        if batch_size is None:
+            batch_size = self.x_samples.shape[0]
+        dataset = torch.utils.data.TensorDataset(self.x_samples, self.theta_samples)
+        if device is None:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.to(device)
+
+        pbar = tqdm(range(epochs))
+        for t in pbar:
+            dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+            for i, batch in enumerate(dataloader):
+                x, theta = batch[0].to(device), batch[1].to(device)
+                self.optimizer.zero_grad()
+                batch_loss = self.loss(x, theta,torch.ones(batch[0].shape[0]).to(device)/batch[0].shape[0])
+                batch_loss.backward()
+                self.optimizer.step()
+            with torch.no_grad():
+                iteration_loss = torch.tensor([self.loss(batch[0].to(device), batch[1].to(device),torch.ones(batch[0].shape[0]).to(device)/batch[0].shape[0]) for i, batch in enumerate(dataloader)]).mean().item()
+            self.loss_values.append(iteration_loss)
+            pbar.set_postfix_str('loss = ' + str(round(iteration_loss,6)) + ' ; device: ' + str(device))
+        self.to(torch.device('cpu'))
+
+    def train_bootstrap(self, epochs, batch_size = None,lr = 5e-3, bootstrap = False):
         if bootstrap:
             w = torch.distributions.Dirichlet(torch.ones(self.x_samples.shape[0])).sample()
         else:

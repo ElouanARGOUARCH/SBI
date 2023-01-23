@@ -17,13 +17,13 @@ def summary_statistics(x):
     return torch.stack([torch.mean(x, dim = -1), torch.std(x, dim = -1)], dim = -1)
 
 #Generate D_theta and D_x
-n_D = 1000
+n_D = 500
 D_theta = torch.linspace(-3,3,n_D).unsqueeze(-1)
 D_x = summary_statistics(simulator(D_theta))
 
 #Generate x_0 from unknown theta0
 theta_0 = torch.tensor([0.])
-n_x0 = 50
+n_x0 = 100
 x0 = simulator(theta_0.unsqueeze(0).repeat(n_x0,1))
 
 #True posterior
@@ -36,10 +36,10 @@ true_posterior_samples = true_posterior.sample([1000])
 
 #Train conditional density estimation
 from conditional_density_estimators import ConditionalDIFDensityEstimator
-dif = ConditionalDIFDensityEstimator(D_x,D_theta,1,[32,32,32])
+dif = ConditionalDIFDensityEstimator(D_x,D_theta,1,[32,32])
 epochs = 500
 batch_size = 100
-dif.train(epochs, batch_size, lr = 1e-3)
+dif.train(epochs,batch_size, lr = 1e-3)
 
 #Sample the posterior p(theta|x0, phi)
 from samplers import IMH
