@@ -70,4 +70,4 @@ for t in range(gibbs_iterations):
         plt.hist(samples.numpy())
         plt.show()
     list_theta.append(current_theta)
-torch.save(torch.cat(list_theta, dim =0), 'theta.sav')
+torch.save(torch.cat(list_theta, dim =0), '../theta.sav')

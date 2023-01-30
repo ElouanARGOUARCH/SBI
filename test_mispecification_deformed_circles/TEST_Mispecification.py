@@ -74,4 +74,4 @@ for t in range(gibbs_iterations):
     sampler = IMH(posterior_log_prob, 1, prior_distribution, 1)
     current_theta = sampler.sample(100)
     list_theta.append(current_theta)
-torch.save(torch.cat(list_theta, dim =0), 'theta.sav')
+torch.save(torch.cat(list_theta, dim =0), '../theta.sav')

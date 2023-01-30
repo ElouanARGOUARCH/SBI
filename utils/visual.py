@@ -2,6 +2,15 @@ import torch
 import matplotlib
 import matplotlib.pyplot as plt
 
+def plot_1d_unormalized_function(f,x_min=-10, x_max=10, bins=200):
+    tt =torch.linspace(x_min, x_max, 200)
+    values = f(tt)
+    plt.plot(tt, values*bins/(torch.sum(values)*(x_max - x_min)))
+
+def plot_1d_unormalized_values(values,tt):
+    x_min, x_max, bins = tt[0], tt[-1], tt.shape[0]
+    plt.plot(tt, values*bins/(torch.sum(values)*(x_max - x_min)))
+
 def plot_2d_function(f, x_min = -10,x_max = 10, y_min = -10, y_max = 10, delta = 50, alpha = 0.7, new_figure = True):
     with torch.no_grad():
         if new_figure :
